@@ -74,7 +74,9 @@ local function WriteManifest()
 return {
     name     = "MetalFarmTweak",
     display  = "Metal Farm Tweak",
-    version  = "1.0.0",
+    version  = "1.0.2",
+    github   = "ushocker/MetalFarmTweak",
+    nexus_id = "147",
     settings = {
         { key="Enabled", title="Enable Metal Farm Tweak",
           description="Master switch. When off, all farms use vanilla ripen times.",
