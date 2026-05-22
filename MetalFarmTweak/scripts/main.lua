@@ -9,6 +9,7 @@ end
 
 local VanillaDefaults = {
     Troilite = 1200.0,
+    Lead = 600.00,
     Gold = 600.0,
     Atacamite = 600.0,
     ConduitCrystal = 1200.0,
@@ -26,6 +27,7 @@ local VanillaDefaults = {
 local Config = {
     Enabled = true,
     Troilite = 1200.0,
+    Lead = 600.00,
     Gold = 600.0,
     Atacamite = 600.0,
     ConduitCrystal = 1200.0,
@@ -57,24 +59,12 @@ local function write_text(path, body)
     return true
 end
 
-local function read_lua_table(path)
-    local f = io.open(path, "r")
-    if not f then return nil end
-    local content = f:read("*all")
-    f:close()
-    if not content or content == "" then return nil end
-    local loader = load(content)
-    if not loader then return nil end
-    local ok, data = pcall(loader)
-    return ok and data or nil
-end
-
 local function WriteManifest()
     local content = [=[
 return {
     name     = "MetalFarmTweak",
     display  = "Metal Farm Tweak",
-    version  = "1.0.2",
+    version  = "1.0.3",
     github   = "ushocker/MetalFarmTweak",
     nexus_id = "147",
     settings = {
@@ -84,6 +74,10 @@ return {
         { key="Troilite", title="Troilite (sec)",
           description="Ripen time in seconds for Troilite. Vanilla: 1200",
           type="slider", default=1200.0, min=10.0, max=1800.0, step=10.0, format="integer",
+          enabled_by="Enabled" },
+        { key="Lead", title="Lead (sec)",
+          description="Ripen time in seconds for Lead. Vanilla: 600",
+          type="slider", default=600.0, min=10.0, max=1800.0, step=10.0, format="integer",
           enabled_by="Enabled" },
         { key="Gold", title="Gold (sec)",
           description="Ripen time in seconds for Gold. Vanilla: 600",
@@ -143,37 +137,6 @@ return {
     end
 end
 
-local function LoadSavedConfig()
-    local changed = false
-    local got_any_shared = false
-
-    if ModRef then
-        for k, _ in pairs(Config) do
-            local v = ModRef:GetSharedVariable("SN2ModSettings/" .. ModName .. "/" .. k)
-            if v ~= nil then
-                got_any_shared = true
-                if type(v) == type(Config[k]) and Config[k] ~= v then
-                    Config[k] = v
-                    changed = true
-                end
-            end
-        end
-    end
-
-    if not got_any_shared then
-        local saved = read_lua_table(SAVED_PATH)
-        if not saved then return changed end
-        for k, v in pairs(saved) do
-            if Config[k] ~= nil and type(v) == type(Config[k]) and Config[k] ~= v then
-                Config[k] = v
-                changed = true
-            end
-        end
-    end
-
-    return changed
-end
-
 local function GetResourceName(farm)
     local itemType = farm.CurrentItemType
     if not itemType or not itemType:IsValid() then return nil end
@@ -221,9 +184,7 @@ local function TweakAllFarms()
     end
 end
 
-
 WriteManifest()
-LoadSavedConfig()
 
 RegisterHook("/Script/Engine.PlayerController:ClientRestart", function()
     boosted = {}
@@ -245,26 +206,24 @@ NotifyOnNewObject("/Game/Blueprints/World/ResourceDeposits/BP_Resource_MetalFarm
     end)
 end)
 
-LoopAsync(1000, function()
+LoopAsync(200, function()
     if not ModRef then return end
 
     local changed = false
-    for k, _ in pairs(Config) do
+    for k, cur in pairs(Config) do
         local v = ModRef:GetSharedVariable("SN2ModSettings/" .. ModName .. "/" .. k)
-        if v ~= nil and type(v) == type(Config[k]) and Config[k] ~= v then
+        if v ~= nil and type(v) == type(cur) and cur ~= v then
+            Config[k] = v
             changed = true
-            break
         end
     end
     if not changed then return end
 
     ExecuteInGameThread(function()
         local ok, err = pcall(function()
-            if LoadSavedConfig() then
-                log("Config changed via UI - reapplying")
-                boosted = {}
-                TweakAllFarms()
-            end
+            log("Config changed via UI - reapplying")
+            boosted = {}
+            TweakAllFarms()
         end)
         if not ok then log("Config poll error: " .. tostring(err)) end
     end)
